@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-已完成环境准备、合成样例和 8 题 LoCoMo 用量试跑，尚未进行正式重复实验和改动对比。
+已完成环境准备、合成样例、8 题用量试跑，以及 40 题 × 两种配置 × 三轮的正式实验（240 次问题运行）。
 
 ## 原始来源
 
@@ -36,7 +36,7 @@
 记录回答 F1、检索/回答时间、API 调用和 token 用量、失败次数；把失败与正确拒答分开。
 正式报告需对齐论文的题目类别、评分与平均方式；子集或模型差异必须明确说明，不能宣称复现全量论文数值。
 DeepSeek 是模型替换，reflection 开关是后续主要实验变量。
-目前只完成 8 题基线用量试跑，未执行这两组正式实验。
+正式实验已完成，固定 40 道未用于试跑的题，两组各三轮；结果见下方正式结果链接。
 
 ## 设置与兼容调整
 
@@ -79,7 +79,7 @@ API key 只保存在本机被忽略的 .env 中，config.py 也被忽略。
 - Qwen 检索模型的所有文件和完整权重校验通过。
 - CPU 实际运行通过：一句测试文本生成 1×1024 检索向量。
 - 本地数据库与 DeepSeek 请求兼容性共 11 项检查通过。
-- API 密钥已由用户在本机配置；连接、完整问答样例和 8 题 LoCoMo 用量测试均已通过，未启动正式重复实验或改动对比。
+- API 密钥已由用户在本机配置；连接、完整问答样例和 8 题 LoCoMo 用量测试均已通过，正式重复实验和关闭 reflection 的改动对比也已完成。
 
 ## 小规模真实数据用量测试
 
@@ -94,3 +94,29 @@ API key 只保存在本机被忽略的 .env 中，config.py 也被忽略。
 结果、原始回答、调用用量和可复用的记忆库保存在 test_results/pilot-时间戳 中。本轮不执行 reflection 改动对比或正式重复实验。
 
 最新结果见 [8 题用量试跑报告](results/pilot-20261109/RESULTS.md)。
+
+## 正式结果与重现步骤
+
+- [完整正式结果、对比图与限制](results/formal-20261109/RESULTS.md)：240/240 次问题运行完成，无 API 失败；记忆前后不变。
+- 主要结果：开启/关闭反思的官方规则 F1 为 50.62/50.47；关闭后每题 token 减少 62.2%，测得耗时减少 41.0%。这是固定单对话子集的结果，不是总体结论。
+- 正式 API 用量 1,933,234 token，按官方空闲/高峰价估算 1.71–3.42 元；包含先前试跑的预算仍在 10 元限制内。
+- [实验前固定的设计](FORMAL_PROTOCOL.md)和 formal_protocol.json 保留选题、评分与费用上限。
+
+从新目录重现（命令均在项目根目录）：
+
+```sh
+python3 -m venv .venv
+PIP_CERT=/etc/ssl/cert.pem SSL_CERT_FILE=/etc/ssl/cert.pem REQUESTS_CA_BUNDLE=/etc/ssl/cert.pem .venv/bin/python -m pip install -r reproduction/requirements-lock.txt
+cp reproduction/config.template.py config.py
+cp reproduction/deepseek.env.example .env
+.venv/bin/python reproduction/setup_key.py
+.venv/bin/python reproduction/download_data.py
+.venv/bin/python reproduction/download_embedding.py
+.venv/bin/python reproduction/restore_formal_memory.py
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false .venv/bin/python -u reproduction/run_formal.py
+.venv/bin/python reproduction/analyze_formal.py
+```
+
+上述安装方式按本次 macOS/Python 环境记录，系统证书路径可按自己的系统调整。重新运行模型实验会产生 API 费用；只查看已保存结果、恢复快照和离线分析不会产生模型费用。
+已有运行会按同一持久账本续跑，完成的 240 个组合不会重复调用；如需全新独立复验，应另建检出目录并保留自己的预算记录。
+尚未发布自己的 GitHub 仓库，未生成最终提交版报告或录制展示。

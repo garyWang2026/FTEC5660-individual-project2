@@ -1,3 +1,5 @@
+> **FTEC5660 reproducibility work:** This checkout includes a measured 40-question, three-trial reflection ablation. See [course setup and run instructions](reproduction/README.md) and [measured results](reproduction/results/formal-20261109/RESULTS.md). The upstream README follows below.
+
 <div align="center">
 
 <img alt="simplemem_logo" src="https://github.com/user-attachments/assets/6ea54ad1-e007-442c-99d7-1174b10d1fec" width="450">

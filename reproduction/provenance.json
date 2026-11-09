@@ -11,7 +11,7 @@
     "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
   },
   "prepared_on": "2026-11-09",
-  "status": "pilot_complete_formal_comparison_pending_budget",
+  "status": "formal_experiment_complete",
   "embedding": {
     "model": "Qwen/Qwen3-Embedding-0.6B",
     "source": "https://modelscope.cn/models/Qwen/Qwen3-Embedding-0.6B",
@@ -91,7 +91,7 @@
     "api_test_run": true,
     "benchmark_run": true,
     "smoke_test_run": true,
-    "formal_experiment_run": false
+    "formal_experiment_run": true
   },
   "pilot": {
     "result_summary": "reproduction/results/pilot-20261109/RESULTS.md",
@@ -100,5 +100,16 @@
     "total_tokens": 196785,
     "estimated_cost_cny_off_peak": 0.37889344,
     "estimated_cost_cny_peak": 0.75778688
+  },
+  "formal": {
+    "result_summary": "reproduction/results/formal-20261109/RESULTS.md",
+    "question_runs": 240,
+    "trials_per_condition": 3,
+    "unique_questions": 40,
+    "api_calls": 1208,
+    "total_tokens": 1933234,
+    "estimated_cost_cny_off_peak": 1.7096175200000001,
+    "estimated_cost_cny_peak": 3.4192350400000002,
+    "memory_unchanged": true
   }
 }

@@ -1,65 +1,59 @@
-# 新对话验证与合并结果
+# Independent conversation replication and combined results
 
-本次在原始实验之外，对另一组完整长对话进行了相同设置的复验。原始结果保留，新结果单独报告，再计算合并结果。
+The original result is retained separately. An additional complete long conversation was evaluated with the same settings, then both results were combined.
 
-## 范围
+## Scope
 
-- 原始 conv-26：419 轮对话、40 道题、两组各三轮，240 次问题运行。
-- 新增 conv-49：509 轮对话、40 道题、两组各三轮，新增 240 次问题运行。
-- 合计：两组对话、80 道不同问题、480 次问题运行；每组对话各类别 1–4 均为 10 题。
-- 新对话在满足每类至少 10 题的未用对话中，按文本与图片说明字符数最少的规则选择，以适应预算；选题与模型、评分在新结果产生前固定，没有按成绩选择对话。
-- 复用原实验问答程序，保持 DeepSeek Flash、关闭 thinking、开启 planning、两组并发、CPU 4 线程和 4096 token 输出上限；两组仅 reflection 开关不同。
+- conv-26: 419 turns, 40 questions, two arms x three trials = 240 question-runs.
+- conv-49: 509 turns, 40 questions, two arms x three trials = 240 additional runs.
+- Total: two conversations, 80 distinct questions, 480 runs. Each conversation has ten questions per category 1-4.
+- The extension selected the shortest unused eligible conversation by dialogue-plus-caption characters, requiring at least ten answered questions per category. This cost rule and question selection were fixed before new answer scores existed.
+- DeepSeek Flash; thinking off; planning on; two concurrent arms; four CPU threads; 4096 output tokens/request. Only reflection differs between arms.
 
-## 按对话与合并结果
+## Results by conversation and combined
 
-| 数据范围 | 开启反思 F1 | 关闭反思 F1 | 关闭减开启（分） | token 减少 | 耗时减少 |
+| Scope | Reflection on F1 | Reflection off F1 | Off minus on, points | Token reduction | Latency reduction |
 |---|---:|---:|---:|---:|---:|
-| 原始对话 | 50.62 | 50.47 | -0.15 | 62.2% | 41.0% |
-| 新增对话 | 46.49 | 46.08 | -0.41 | 62.1% | 43.1% |
-| 合并两组 | 48.56 | 48.28 | -0.28 | 62.2% | 42.1% |
+| Original: conv-26 | 50.62 | 50.47 | -0.15 | 62.2% | 41.0% |
+| Extension: conv-49 | 46.49 | 46.08 | -0.41 | 62.1% | 43.1% |
+| Combined | 48.56 | 48.28 | -0.28 | 62.2% | 42.1% |
 
-分数为三轮平均；不是答对率。每轮先在各对话上汇总，再对轮次求均值。两组题量相同，因此合并结果对两组对话赋予相同权重。
+Scores are means across three trial aggregates, not correctness rates. Equal question counts give both conversations equal weight.
 
-![两组对话合并对比](comparison.png)
+![Combined quality, token usage and latency](comparison.png)
 
-## 合并结果的波动与限制
+## Combined variability and limits
 
-官方规则 F1：开启反思 48.56 ± 1.04，关闭反思 48.28 ± 2.91；± 为三轮样本标准差。
-对每题先平均三轮，再进行 10000 次题目级成对 bootstrap，关闭减开启的描述性区间为 [-2.55, +1.94] 分，条件是这两组固定对话和记忆。
-只有两组对话，且新增对话为成本受限选择，不能推广到全部 LoCoMo 或声称质量不受影响。每份记忆仅构建一次，不评估记忆构建的随机性。
-两组问答同时运行，耗时是在固定并发负载下测得；跨对话的绝对时间还受运行时段影响。
-F1 为词语匹配指标，保留作者原始 set-token F1 作为辅助结果，全部原始答案可供核查。
+Category-aware LoCoMo F1, mean +/- trial sample SD: reflection on 48.56 +/- 1.04; reflection off 48.28 +/- 2.91.
+After averaging trials per question, 10,000 paired question bootstrap samples give [-2.55, +1.94] F1 points for off minus on, conditional on these two fixed conversations and memories. This is not a population interval or non-inferiority proof. The cost-selected extension and once-built memories limit generalization.
+Timing is measured with both arms running concurrently; runtime periods may also affect absolute cross-conversation latency. Lexical F1 is not semantic correctness; original set-token F1 and all raw answers are retained.
 
-## 新增费用与核对
+## Extension usage and checks
 
-新增构建与问答共调用 1224 次，消耗 2,135,868 token；其中记忆构建 14 次，问答 1210 次。
-新增费用按官方空闲/高峰价估算 2.1193–4.2386 元，构建和问答均计入同一 4.5 元上限，不包括之前已完成的实验。
-费用是根据服务端 usage 的估算，实际扣费以平台账单为准；未知费用预留 0.0000 元。
-API 失败/未知用量 0 次，标记失败的问题 0 次；240 个新增问题组合完整，逐题用量与账本一致，前后记忆一致。
+Construction plus queries: 1224 API calls, 2,135,868 tokens; 14 build calls and 1210 query calls.
+Estimated price-list cost: CNY 2.1193-4.2386, including build and queries under the same CNY 4.5 extension cap. Prior experiments are outside this cap. This is not an invoice; unknown reservations are CNY 0.0000.
+Failed/unknown API calls: 0; failed questions: 0. All 240 extension tuples are complete, per-question usage matches the ledger, and memory content/IDs are unchanged.
 
-## 结果与来源
+## Files and references
 
-- condition_summary.csv：按对话与合并结果，含均值、三轮标准差。
-- questions.csv：两组对话全部 480 次回答、参考、评分与用量。
-- questions.jsonl / api_ledger.jsonl：新增实验的原始回答与持久费用账本。
-- run_metadata.jsonl / build_summary.jsonl：固定参数和记忆构建记录。
-- [原始实验结果](../formal-20261109/RESULTS.md)、[LoCoMo 数据](https://github.com/snap-research/locomo)、[官方价格](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)。
+- `condition_summary.csv`: per-conversation and combined means/sample SDs.
+- `questions.csv`: all 480 original and extension answers, references, scores and usage.
+- `questions.jsonl` / `api_ledger.jsonl`: raw extension answers and persistent cost ledger.
+- `run_metadata.jsonl` / `build_summary.jsonl`: fixed settings and build provenance.
+- [Original result](../formal-20261109/RESULTS.md), [LoCoMo](https://github.com/snap-research/locomo), [official pricing](https://api-docs.deepseek.com/quick_start/pricing/).
 
-## 解读与课程作业建议
+## Interpretation
 
-两组对话分别得到约 62.2% 和 62.1% 的 token 节省，说明此前的效率观察在另一个对话中再次出现。两组对话的平均 F1 分别下降 0.15 和 0.41 分，合并下降 0.28 分。
-这个结果支持固定两组对话中的效率与质量权衡；区间跨越 0，不能证明关闭反思一定不降低质量，也不能认定该配置普遍优于原配置。
-与继续在同一组题上重复相比，新增一组对话提供了更有价值的外部检查。当前规模已能支撑课程复现报告中的受控修改分析，建议优先整理报告、案例与展示，不必为本次作业继续消耗余额。
+Token savings were approximately 62.2% and 62.1% in the two conversations. Mean F1 decreased by 0.15 and 0.41 points respectively, or 0.28 points combined. The efficiency pattern therefore appeared again in an independent conversation, conditional on this setup. The interval crosses zero and does not prove non-inferiority or universal superiority. The extension strengthens the coursework analysis but remains far smaller than the full benchmark.
 
-## 新增阶段调试记录
+## Extension debug diary
 
-首次启动查询时，本地预热检查仍使用原对话中的姓名 Caroline，导致在新对话数据库上断言失败。此时尚无新对话测题 API 调用；已完成的 14 次记忆构建请求、记忆数据库和同一费用账本全部保留。
-修正为使用当前对话 speaker_a 作为预热关键词，仅影响本地不计时的健康检查，不改变 40 道正式问题、评分、模型参数或两组差异。修正后保存代码版本与协议，再开始全部正式查询。
-新增的离线检查验证了 8192 token 记忆输出预留及并发费用保护；API 运行没有失败。此前的本地启动失败与 API 失败分开记录，没有把未完成问答算作正常完成。
+The first local query startup check still searched for the original conversation's speaker, Caroline, and failed on the new database. No extension evaluation-question API calls had been sent. All 14 completed memory-build calls, the resulting database and the persistent ledger were retained.
 
-## 恢复与复验
+The warmup keyword was changed to the current conversation's `speaker_a`. This affects only an untimed local health check, not the fixed questions, scoring, model settings or arm difference. The corrected code version and protocol were saved before question trials began. Offline checks verified the 8192-token construction reservation and concurrent budget protection. The local startup failure is distinguished from API failures; no incomplete question was reported as completed.
 
-fixed_memories.jsonl、memory_db_snapshot.zip 和 snapshot_manifest.jsonl 保存同一份 540 条公开基准衍生记忆及其向量/索引，不包含 API 密钥。
-配置好项目环境、数据与本地检索模型后，运行 `.venv/bin/python reproduction/restore_replication_memory.py` 恢复快照，无需付费重建记忆；运行 `reproduction/run_replication.py` 进行同一组问答复验，运行 `reproduction/analyze_replication.py` 离线重新生成合并结果。
-原始第一组结果和固定设计仍保留。复验会产生新的 API 费用，应在单独检出目录中保留自己的预算账本；本机已经完成的组合不会再次调用。
-本报告只公开 token 及按价目表估算的费用，不公开账户余额或密钥。
+## Restoration and replay
+
+`fixed_memories.jsonl`, `memory_db_snapshot.zip` and `snapshot_manifest.jsonl` preserve the same 540 benchmark-derived memories and vectors/indexes, without credentials. After environment, data and model setup, run `.venv/bin/python reproduction/restore_replication_memory.py` to restore without paid construction. Use `reproduction/run_replication.py` for a paid question replay, or `reproduction/analyze_replication.py --archived` for offline combined analysis.
+
+The original first-conversation results and fixed designs remain intact. An independent paid repeat should use a separate checkout and preserve its own persistent ledger. The current completed local tuples are skipped. Only metered tokens and price-list cost estimates are published, never API credentials or account balances.

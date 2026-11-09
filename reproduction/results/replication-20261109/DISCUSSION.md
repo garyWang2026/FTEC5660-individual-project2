@@ -1,18 +1,15 @@
-## 解读与课程作业建议
+## Interpretation
 
-两组对话分别得到约 62.2% 和 62.1% 的 token 节省，说明此前的效率观察在另一个对话中再次出现。两组对话的平均 F1 分别下降 0.15 和 0.41 分，合并下降 0.28 分。
-这个结果支持固定两组对话中的效率与质量权衡；区间跨越 0，不能证明关闭反思一定不降低质量，也不能认定该配置普遍优于原配置。
-与继续在同一组题上重复相比，新增一组对话提供了更有价值的外部检查。当前规模已能支撑课程复现报告中的受控修改分析，建议优先整理报告、案例与展示，不必为本次作业继续消耗余额。
+Token savings were approximately 62.2% and 62.1% in the two conversations. Mean F1 decreased by 0.15 and 0.41 points respectively, or 0.28 points combined. The efficiency pattern therefore appeared again in an independent conversation, conditional on this setup. The interval crosses zero and does not prove non-inferiority or universal superiority. The extension strengthens the coursework analysis but remains far smaller than the full benchmark.
 
-## 新增阶段调试记录
+## Extension debug diary
 
-首次启动查询时，本地预热检查仍使用原对话中的姓名 Caroline，导致在新对话数据库上断言失败。此时尚无新对话测题 API 调用；已完成的 14 次记忆构建请求、记忆数据库和同一费用账本全部保留。
-修正为使用当前对话 speaker_a 作为预热关键词，仅影响本地不计时的健康检查，不改变 40 道正式问题、评分、模型参数或两组差异。修正后保存代码版本与协议，再开始全部正式查询。
-新增的离线检查验证了 8192 token 记忆输出预留及并发费用保护；API 运行没有失败。此前的本地启动失败与 API 失败分开记录，没有把未完成问答算作正常完成。
+The first local query startup check still searched for the original conversation's speaker, Caroline, and failed on the new database. No extension evaluation-question API calls had been sent. All 14 completed memory-build calls, the resulting database and the persistent ledger were retained.
 
-## 恢复与复验
+The warmup keyword was changed to the current conversation's `speaker_a`. This affects only an untimed local health check, not the fixed questions, scoring, model settings or arm difference. The corrected code version and protocol were saved before question trials began. Offline checks verified the 8192-token construction reservation and concurrent budget protection. The local startup failure is distinguished from API failures; no incomplete question was reported as completed.
 
-fixed_memories.jsonl、memory_db_snapshot.zip 和 snapshot_manifest.jsonl 保存同一份 540 条公开基准衍生记忆及其向量/索引，不包含 API 密钥。
-配置好项目环境、数据与本地检索模型后，运行 `.venv/bin/python reproduction/restore_replication_memory.py` 恢复快照，无需付费重建记忆；运行 `reproduction/run_replication.py` 进行同一组问答复验，运行 `reproduction/analyze_replication.py` 离线重新生成合并结果。
-原始第一组结果和固定设计仍保留。复验会产生新的 API 费用，应在单独检出目录中保留自己的预算账本；本机已经完成的组合不会再次调用。
-本报告只公开 token 及按价目表估算的费用，不公开账户余额或密钥。
+## Restoration and replay
+
+`fixed_memories.jsonl`, `memory_db_snapshot.zip` and `snapshot_manifest.jsonl` preserve the same 540 benchmark-derived memories and vectors/indexes, without credentials. After environment, data and model setup, run `.venv/bin/python reproduction/restore_replication_memory.py` to restore without paid construction. Use `reproduction/run_replication.py` for a paid question replay, or `reproduction/analyze_replication.py --archived` for offline combined analysis.
+
+The original first-conversation results and fixed designs remain intact. An independent paid repeat should use a separate checkout and preserve its own persistent ledger. The current completed local tuples are skipped. Only metered tokens and price-list cost estimates are published, never API credentials or account balances.

@@ -3,13 +3,13 @@ from pathlib import Path
 from getpass import getpass
 import json
 root = Path(__file__).resolve().parents[1]
-key = getpass('粘贴 DeepSeek API 密钥，然后按回车（输入不会显示）: ').strip()
+key = getpass('Paste your DeepSeek API key and press Enter (input is hidden): ').strip()
 if not key or any(c.isspace() for c in key):
-    raise SystemExit('未保存：密钥为空或包含空白，请重新运行。')
+    raise SystemExit('Not saved: the key is empty or contains whitespace. Run this tool again.')
 path = root / '.env'
 path.touch(mode=0o600, exist_ok=True)
 path.chmod(0o600)
 lines = [line for line in path.read_text().splitlines() if not line.startswith('OPENAI_API_KEY=')]
 lines.append('OPENAI_API_KEY=' + json.dumps(key))
 path.write_text('\n'.join(lines) + '\n')
-print('密钥已保存到本机。没有进行模型调用，无需把密钥发到聊天里。')
+print('Key saved locally. No model request was sent. Do not share your key in chat.')

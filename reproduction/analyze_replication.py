@@ -31,16 +31,19 @@ def group_stats(rows):
 
 
 def main():
-    state=json.loads((RUN/'summary.json').read_text())
+    archived='--archived' in sys.argv
+    source=OUT if archived else RUN
+    metadata=json.loads((OUT/'run_metadata.jsonl').read_text()) if archived else None
+    state=metadata['summary'] if archived else json.loads((RUN/'summary.json').read_text())
     if not state['completed']:raise SystemExit('Replication incomplete; preserve partial results without claiming completion.')
     plan=json.loads((ROOT/'reproduction/replication_plan.json').read_text())
     protocol=json.loads((ROOT/'reproduction/replication_protocol.json').read_text())
-    new=[json.loads(l) for l in (RUN/'questions.jsonl').read_text().splitlines()]
+    new=[json.loads(l) for l in (source/'questions.jsonl').read_text().splitlines()]
     old=[json.loads(l) for l in (ROOT/'reproduction/results/formal-20261109/questions.jsonl').read_text().splitlines()]
     expected={(t,c,i) for t in range(1,4) for c in CONDITIONS for i in plan['question_indices']}
     assert len(new)==240 and {(r['trial'],r['condition'],r['qa_index']) for r in new}==expected
     assert Counter((r['trial'],r['condition'],r['category']) for r in new)==Counter({(t,c,k):10 for t in range(1,4) for c in CONDITIONS for k in range(1,5)})
-    ledger=BudgetLedger(RUN/'api_ledger.jsonl',4.5)
+    ledger=BudgetLedger(source/'api_ledger.jsonl',4.5)
     total=ledger.summary()
     query_events={i:e for i,e in ledger.events.items() if e['stage']!='build_memory'}
     memory_events={i:e for i,e in ledger.events.items() if e['stage']=='build_memory'}
@@ -48,10 +51,11 @@ def main():
     assert sum(r['usage']['total_tokens'] for r in new)==sum(e.get('total_tokens',0) for e in query_events.values())
     assert total['charged_upper_cny']<=4.5 and state['memory_unchanged']
     OUT.mkdir(parents=True,exist_ok=True)
-    for name in ['questions.jsonl','api_ledger.jsonl']:shutil.copy2(RUN/name,OUT/name)
-    (OUT/'run_metadata.jsonl').write_text(json.dumps({'runtime':json.loads((RUN/'runtime.json').read_text()),'summary':state,'protocol':protocol,'plan':plan})+'\n')
-    build=json.loads((SOURCE/'build_summary.json').read_text())
-    (OUT/'build_summary.jsonl').write_text(json.dumps(build)+'\n')
+    if not archived:
+        for name in ['questions.jsonl','api_ledger.jsonl']:shutil.copy2(RUN/name,OUT/name)
+        (OUT/'run_metadata.jsonl').write_text(json.dumps({'runtime':json.loads((RUN/'runtime.json').read_text()),'summary':state,'protocol':protocol,'plan':plan})+'\n')
+        build=json.loads((SOURCE/'build_summary.json').read_text())
+        (OUT/'build_summary.jsonl').write_text(json.dumps(build)+'\n')
     combined=[dict(r,sample_id=sid) for sid,group in [('conv-26',old),('conv-49',new)] for r in group]
     write_csv(OUT/'questions.csv',[{k:r[k] for k in ['sample_id','trial','condition','qa_index','category','question','reference','answer','locomo_f1','upstream_f1','total_seconds','failed']}|r['usage'] for r in combined])
     stats={'conv-26':group_stats(old),'conv-49':group_stats(new),'combined':group_stats(combined)}
@@ -86,51 +90,49 @@ def main():
     fig.text(.5,.01,'80 questions | 2 conversations | 3 trials per condition | fixed per-conversation memory | error bars: trial SD',ha='center',fontsize=9)
     fig.tight_layout(rect=[0,.05,1,.92]);fig.savefig(OUT/'comparison.png',dpi=200);fig.savefig(OUT/'comparison.svg');plt.close(fig)
     p=OUT/'comparison.svg';p.write_text('\n'.join(line.rstrip() for line in p.read_text().splitlines())+'\n')
-    report='''# 新对话验证与合并结果
+    report='''# Independent conversation replication and combined results
 
-本次在原始实验之外，对另一组完整长对话进行了相同设置的复验。原始结果保留，新结果单独报告，再计算合并结果。
+The original result is retained separately. An additional complete long conversation was evaluated with the same settings, then both results were combined.
 
-## 范围
+## Scope
 
-- 原始 conv-26：419 轮对话、40 道题、两组各三轮，240 次问题运行。
-- 新增 conv-49：509 轮对话、40 道题、两组各三轮，新增 240 次问题运行。
-- 合计：两组对话、80 道不同问题、480 次问题运行；每组对话各类别 1–4 均为 10 题。
-- 新对话在满足每类至少 10 题的未用对话中，按文本与图片说明字符数最少的规则选择，以适应预算；选题与模型、评分在新结果产生前固定，没有按成绩选择对话。
-- 复用原实验问答程序，保持 DeepSeek Flash、关闭 thinking、开启 planning、两组并发、CPU 4 线程和 4096 token 输出上限；两组仅 reflection 开关不同。
+- conv-26: 419 turns, 40 questions, two arms x three trials = 240 question-runs.
+- conv-49: 509 turns, 40 questions, two arms x three trials = 240 additional runs.
+- Total: two conversations, 80 distinct questions, 480 runs. Each conversation has ten questions per category 1-4.
+- The extension selected the shortest unused eligible conversation by dialogue-plus-caption characters, requiring at least ten answered questions per category. This cost rule and question selection were fixed before new answer scores existed.
+- DeepSeek Flash; thinking off; planning on; two concurrent arms; four CPU threads; 4096 output tokens/request. Only reflection differs between arms.
 
-## 按对话与合并结果
+## Results by conversation and combined
 
-| 数据范围 | 开启反思 F1 | 关闭反思 F1 | 关闭减开启（分） | token 减少 | 耗时减少 |
+| Scope | Reflection on F1 | Reflection off F1 | Off minus on, points | Token reduction | Latency reduction |
 |---|---:|---:|---:|---:|---:|
 '''
-    labels={'conv-26':'原始对话','conv-49':'新增对话','combined':'合并两组'}
+    labels={'conv-26':'Original: conv-26','conv-49':'Extension: conv-49','combined':'Combined'}
     for sid in stats:
         g=stats[sid];d=g['comparison']
         report+=f"| {labels[sid]} | {g['reflection_on']['f1']['mean']*100:.2f} | {g['reflection_off']['f1']['mean']*100:.2f} | {d['f1_off_minus_on_points']:+.2f} | {d['token_saving_percent']:.1f}% | {d['latency_saving_percent']:.1f}% |\n"
-    report+='\n分数为三轮平均；不是答对率。每轮先在各对话上汇总，再对轮次求均值。两组题量相同，因此合并结果对两组对话赋予相同权重。\n\n![两组对话合并对比](comparison.png)\n'
+    report+='\nScores are means across three trial aggregates, not correctness rates. Equal question counts give both conversations equal weight.\n\n![Combined quality, token usage and latency](comparison.png)\n'
     g=stats['combined']
-    report+=f'''\n## 合并结果的波动与限制
+    report+=f'''
+## Combined variability and limits
 
-官方规则 F1：开启反思 {g['reflection_on']['f1']['mean']*100:.2f} ± {g['reflection_on']['f1']['sd']*100:.2f}，关闭反思 {g['reflection_off']['f1']['mean']*100:.2f} ± {g['reflection_off']['f1']['sd']*100:.2f}；± 为三轮样本标准差。
-对每题先平均三轮，再进行 10000 次题目级成对 bootstrap，关闭减开启的描述性区间为 [{interval[0]:+.2f}, {interval[1]:+.2f}] 分，条件是这两组固定对话和记忆。
-只有两组对话，且新增对话为成本受限选择，不能推广到全部 LoCoMo 或声称质量不受影响。每份记忆仅构建一次，不评估记忆构建的随机性。
-两组问答同时运行，耗时是在固定并发负载下测得；跨对话的绝对时间还受运行时段影响。
-F1 为词语匹配指标，保留作者原始 set-token F1 作为辅助结果，全部原始答案可供核查。
+Category-aware LoCoMo F1, mean +/- trial sample SD: reflection on {g['reflection_on']['f1']['mean']*100:.2f} +/- {g['reflection_on']['f1']['sd']*100:.2f}; reflection off {g['reflection_off']['f1']['mean']*100:.2f} +/- {g['reflection_off']['f1']['sd']*100:.2f}.
+After averaging trials per question, 10,000 paired question bootstrap samples give [{interval[0]:+.2f}, {interval[1]:+.2f}] F1 points for off minus on, conditional on these two fixed conversations and memories. This is not a population interval or non-inferiority proof. The cost-selected extension and once-built memories limit generalization.
+Timing is measured with both arms running concurrently; runtime periods may also affect absolute cross-conversation latency. Lexical F1 is not semantic correctness; original set-token F1 and all raw answers are retained.
 
-## 新增费用与核对
+## Extension usage and checks
 
-新增构建与问答共调用 {total['api_calls']} 次，消耗 {total['total_tokens']:,} token；其中记忆构建 {len(memory_events)} 次，问答 {len(query_events)} 次。
-新增费用按官方空闲/高峰价估算 {total['estimated_off_peak_cny']:.4f}–{total['charged_upper_cny']:.4f} 元，构建和问答均计入同一 4.5 元上限，不包括之前已完成的实验。
-费用是根据服务端 usage 的估算，实际扣费以平台账单为准；未知费用预留 {total['unknown_reservations']:.4f} 元。
-API 失败/未知用量 {total['failed_or_unknown_api_calls']} 次，标记失败的问题 {sum(r['failed'] for r in new)} 次；240 个新增问题组合完整，逐题用量与账本一致，前后记忆一致。
+Construction plus queries: {total['api_calls']} API calls, {total['total_tokens']:,} tokens; {len(memory_events)} build calls and {len(query_events)} query calls.
+Estimated price-list cost: CNY {total['estimated_off_peak_cny']:.4f}-{total['charged_upper_cny']:.4f}, including build and queries under the same CNY 4.5 extension cap. Prior experiments are outside this cap. This is not an invoice; unknown reservations are CNY {total['unknown_reservations']:.4f}.
+Failed/unknown API calls: {total['failed_or_unknown_api_calls']}; failed questions: {sum(r['failed'] for r in new)}. All 240 extension tuples are complete, per-question usage matches the ledger, and memory content/IDs are unchanged.
 
-## 结果与来源
+## Files and references
 
-- condition_summary.csv：按对话与合并结果，含均值、三轮标准差。
-- questions.csv：两组对话全部 480 次回答、参考、评分与用量。
-- questions.jsonl / api_ledger.jsonl：新增实验的原始回答与持久费用账本。
-- run_metadata.jsonl / build_summary.jsonl：固定参数和记忆构建记录。
-- [原始实验结果](../formal-20261109/RESULTS.md)、[LoCoMo 数据](https://github.com/snap-research/locomo)、[官方价格](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)。
+- `condition_summary.csv`: per-conversation and combined means/sample SDs.
+- `questions.csv`: all 480 original and extension answers, references, scores and usage.
+- `questions.jsonl` / `api_ledger.jsonl`: raw extension answers and persistent cost ledger.
+- `run_metadata.jsonl` / `build_summary.jsonl`: fixed settings and build provenance.
+- [Original result](../formal-20261109/RESULTS.md), [LoCoMo](https://github.com/snap-research/locomo), [official pricing](https://api-docs.deepseek.com/quick_start/pricing/).
 '''
     notes=OUT/'DISCUSSION.md'
     if notes.exists():report+='\n'+notes.read_text()

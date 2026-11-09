@@ -16,7 +16,6 @@ RUN=ROOT/'test_results/formal-20261109'
 OUT=ROOT/'reproduction/results/formal-20261109'
 CONDITIONS=['reflection_on','reflection_off']
 LABELS={'reflection_on':'Reflection on','reflection_off':'Reflection off'}
-CN={'reflection_on':'开启反思','reflection_off':'关闭反思'}
 
 
 def mean_sd(values):
@@ -30,25 +29,29 @@ def csv_file(path,rows):
 
 
 def main():
-    summary=json.loads((RUN/'summary.json').read_text())
+    archived='--archived' in sys.argv
+    source=OUT if archived else RUN
+    metadata=json.loads((OUT/'run_metadata.jsonl').read_text()) if archived else None
+    summary=metadata['summary'] if archived else json.loads((RUN/'summary.json').read_text())
     if not summary['completed']:
         raise SystemExit('Run incomplete; refusing to create a completed-experiment report.')
-    protocol=json.loads((RUN/'protocol.json').read_text())
-    rows=[json.loads(l) for l in (RUN/'questions.jsonl').read_text().splitlines()]
+    protocol=metadata['protocol'] if archived else json.loads((RUN/'protocol.json').read_text())
+    rows=[json.loads(l) for l in (source/'questions.jsonl').read_text().splitlines()]
     expected={(t,c,i) for t in range(1,4) for c in CONDITIONS for i in protocol['question_indices']}
     actual={(r['trial'],r['condition'],r['qa_index']) for r in rows}
     assert len(rows)==len(actual)==240 and actual==expected
     assert Counter((r['condition'],r['trial'],r['category']) for r in rows)==Counter({(c,t,k):10 for c in CONDITIONS for t in range(1,4) for k in range(1,5)})
-    ledger=BudgetLedger(RUN/'api_ledger.jsonl',9)
+    ledger=BudgetLedger(source/'api_ledger.jsonl',9)
     usage=ledger.summary()
     assert usage['charged_upper_cny']<=9
     assert sum(r['usage']['api_calls'] for r in rows)==usage['api_calls']
     assert sum(r['usage']['total_tokens'] for r in rows)==usage['total_tokens']
     assert summary['memory_unchanged']
     OUT.mkdir(parents=True,exist_ok=True)
-    shutil.copy2(RUN/'questions.jsonl',OUT/'questions.jsonl')
-    shutil.copy2(RUN/'api_ledger.jsonl',OUT/'api_ledger.jsonl')
-    (OUT/'run_metadata.jsonl').write_text(json.dumps({'runtime':json.loads((RUN/'runtime.json').read_text()),'summary':summary,'protocol':protocol})+'\n')
+    if not archived:
+        shutil.copy2(RUN/'questions.jsonl',OUT/'questions.jsonl')
+        shutil.copy2(RUN/'api_ledger.jsonl',OUT/'api_ledger.jsonl')
+        (OUT/'run_metadata.jsonl').write_text(json.dumps({'runtime':json.loads((RUN/'runtime.json').read_text()),'summary':summary,'protocol':protocol})+'\n')
     flat=[]
     for r in sorted(rows,key=lambda r:(r['trial'],r['qa_index'],r['condition'])):
         flat.append({k:r[k] for k in ['trial','condition','qa_index','category','question','reference','answer','failed','locomo_f1','upstream_f1','retrieval_seconds','answer_seconds','total_seconds','retrieved_memories']} | r['usage'])
@@ -112,70 +115,63 @@ def main():
 
     def fmt(c,m,scale=1):
         return f"{stats[c][m]['mean']*scale:.2f} ± {stats[c][m]['sd']*scale:.2f}"
-    report=f'''# SimpleMem 正式复现实验与反思消融结果
+    report=f'''# SimpleMem: first-conversation reproduction and reflection ablation
 
-日期：2026-11-09。完成 40 道固定题目 × 2 种配置 × 3 轮，共 240 次问题运行。
+Date: 2026-11-09. Completed 40 held-out questions x 2 conditions x 3 trials = 240 question-runs.
 
-## 主要结果
+## Main results
 
-| 指标（3 轮均值 ± 样本标准差） | 开启反思 | 关闭反思 |
+| Metric (mean +/- sample SD across three trial aggregates) | Reflection on | Reflection off |
 |---|---:|---:|
-| LoCoMo 官方规则 F1（0–100 分） | {fmt('reflection_on','locomo_f1',100)} | {fmt('reflection_off','locomo_f1',100)} |
-| 作者原始 set-token F1（0–100 分） | {fmt('reflection_on','upstream_f1',100)} | {fmt('reflection_off','upstream_f1',100)} |
-| 每题全部 API token | {fmt('reflection_on','mean_tokens')} | {fmt('reflection_off','mean_tokens')} |
-| 每题 API 请求次数 | {fmt('reflection_on','mean_api_calls')} | {fmt('reflection_off','mean_api_calls')} |
-| 每题检索与回答时间（秒） | {fmt('reflection_on','mean_latency_seconds')} | {fmt('reflection_off','mean_latency_seconds')} |
+| Category-aware LoCoMo F1, 0-100 | {fmt('reflection_on','locomo_f1',100)} | {fmt('reflection_off','locomo_f1',100)} |
+| Original SimpleMem set-token F1, 0-100 | {fmt('reflection_on','upstream_f1',100)} | {fmt('reflection_off','upstream_f1',100)} |
+| All API tokens per question | {fmt('reflection_on','mean_tokens')} | {fmt('reflection_off','mean_tokens')} |
+| API calls per question | {fmt('reflection_on','mean_api_calls')} | {fmt('reflection_off','mean_api_calls')} |
+| Retrieval-plus-answer time, seconds | {fmt('reflection_on','mean_latency_seconds')} | {fmt('reflection_off','mean_latency_seconds')} |
 
-关闭反思的 F1 相对开启反思变化为 {delta:+.2f} 分；每题 token 变化为 {-tokens_saved:+.1f}%，API 次数变化为 {-calls_saved:+.1f}%，耗时变化为 {-latency_saved:+.1f}%。
-按题目先平均 3 轮，再对 40 道题进行 10,000 次成对 bootstrap，关闭减开启的 F1 条件区间为 [{ci[0]*100:+.2f}, {ci[1]*100:+.2f}] 分。
-这是固定这一组对话与这一份记忆的描述性区间，不是整个 LoCoMo 总体的置信结论，也不包含记忆构建的随机性。
+Off minus on: {delta:+.2f} F1 points. Disabling reflection reduced tokens by {tokens_saved:.1f}%, API calls by {calls_saved:.1f}% and latency by {latency_saved:.1f}%.
+After averaging three trials per question, 10,000 paired question bootstrap samples give a conditional interval of [{ci[0]*100:+.2f}, {ci[1]*100:+.2f}] F1 points. This describes this fixed conversation and memory, excludes memory-build variability, and is not a whole-benchmark confidence claim.
 
-![质量、用量与耗时对比](comparison.png)
+![Quality, token usage and latency](comparison.png)
 
-## 分类结果
+## Category results
 
-| 类别 | 开启反思 F1（分） | 关闭反思 F1（分） |
+| Category | Reflection on F1 | Reflection off F1 |
 |---|---:|---:|
 '''
-    names={1:'多跳',2:'时间',3:'开放域',4:'单跳'}
+    names={1:'Multi-hop',2:'Temporal',3:'Open-domain',4:'Single-hop'}
     for cat in range(1,5):
         a=next(x for x in categories if x['condition']=='reflection_on' and x['category']==cat)
         b=next(x for x in categories if x['condition']=='reflection_off' and x['category']==cat)
-        report+=f"| {cat}：{names[cat]} | {a['locomo_f1_mean']*100:.2f} ± {a['locomo_f1_sd']*100:.2f} | {b['locomo_f1_mean']*100:.2f} ± {b['locomo_f1_sd']*100:.2f} |\n"
+        report+=f"| {cat}: {names[cat]} | {a['locomo_f1_mean']*100:.2f} +/- {a['locomo_f1_sd']*100:.2f} | {b['locomo_f1_mean']*100:.2f} +/- {b['locomo_f1_sd']*100:.2f} |\n"
     report+=f'''
-## 用量与执行核对
+## Usage and integrity checks
 
-共 {usage['api_calls']:,} 次 API 请求，输入 {usage['prompt_tokens']:,} token，输出 {usage['completion_tokens']:,} token，总计 {usage['total_tokens']:,} token；缓存输入 {usage['cached_input_tokens']:,} token。
-正式实验按官方空闲/高峰费率估算 {usage['estimated_off_peak_cny']:.4f}–{usage['charged_upper_cny']:.4f} 元，未超过正式实验 9 元上限；另预留 1 元覆盖此前试跑与连通样例，总预算上限 10 元。
-这是价目表估算，不是平台账单。未知费用预留为 {usage['unknown_reservations']:.4f} 元。
-失败或未知用量的 API 请求 {usage['failed_or_unknown_api_calls']} 次；标记失败的问题运行 {sum(r['failed'] for r in rows)} 次。失败运行计 0 分，没有删除失败题。
-检查完成 240 个唯一的题目/轮次/配置组合，类别和题数符合预定设计；逐题用量与持久账本完全相符。
-实验前后 454 条记忆的内容和 ID 完全一致；没有重新构建记忆或读取答案标注进行检索。
+API calls: {usage['api_calls']:,}; input tokens: {usage['prompt_tokens']:,}; output tokens: {usage['completion_tokens']:,}; total tokens: {usage['total_tokens']:,}; cached input: {usage['cached_input_tokens']:,}.
+Price-list estimate: CNY {usage['estimated_off_peak_cny']:.4f}-{usage['charged_upper_cny']:.4f}, within the CNY 9 formal cap (plus CNY 1 reserved for earlier checks). This is not an invoice. Unknown reservations: CNY {usage['unknown_reservations']:.4f}.
+Failed/unknown API calls: {usage['failed_or_unknown_api_calls']}; failed question-runs: {sum(r['failed'] for r in rows)}. Failed questions are retained with zero scores. All 240 prescribed unique tuples and category counts were verified; question-level usage matches the ledger. All 454 memory contents and IDs remained unchanged. QA gold/evidence labels were not used to build or retrieve memories.
 
-## 条件与复现范围
+## Conditions and scope
 
-- 使用 SimpleMem 作者提交 db80b6a 的文本路径，并保留已记录的本地兼容调整；运行版本和参数见 run_metadata.jsonl。
-- 使用 DeepSeek Flash，关闭模型 thinking；系统 planning 开启。两组唯一主动改变的系统设置为 reflection 的开关；开启时最多两轮补充检索。
-- LoCoMo 第一组对话 conv-26 的完整 419 轮对话，压缩得到试跑阶段的 454 条结构化记忆。正式题目按四个类别各抽 10 题，排除全部 8 道用量试跑题；选题在实验前固定，没有根据正式结果调整。
-- 检索模型为 Qwen3-Embedding-0.6B，CPU，4 个线程；两组在每题上同时运行，每组内部检索串行。时间包含共享机器上的固定两组并发负载，不能当作单请求独占机器的时延。
-- 每次模型请求输出上限 4096 token，SDK 自动重试关闭，单次超时 90 秒；作者自身的重试逻辑保留且所有请求计费记录在账本中。
-- 主要评分按固定版本 LoCoMo 官方规则，辅助评分复用 SimpleMem 原脚本规则；都不代表人工语义正确率。
-- 每轮 40 题结果先汇总，再对三轮计算均值和样本标准差；由于各类别题数相等，整体平均也等于四类宏平均。
+- Text pipeline from SimpleMem db80b6a plus documented compatibility changes. Exact runtime and protocol: `run_metadata.jsonl`.
+- DeepSeek Flash, thinking disabled, planning enabled. Only reflection differs; reflection on permits at most two extra retrieval rounds.
+- Complete conv-26 input: 419 turns, 454 pilot-built memories. Ten held-out questions per category 1-4; all eight pilot questions excluded. Selection was fixed before formal answers.
+- Qwen3-Embedding-0.6B on CPU, four threads. Two arms run concurrently; retrieval inside each arm is sequential. Timing describes shared load, not isolated single-request latency.
+- Output cap 4096 tokens/request; SDK retries zero; timeout 90 seconds. Original application retry logic is retained and every request is metered.
+- Primary scoring follows the pinned LoCoMo category-aware rules; original set-token F1 is secondary. Neither is semantic accuracy. Trial means are averaged across three trials; equal category counts make the overall mean equal to the category macro-average.
 
-## 与论文报告的对照
+## Comparison with the reported paper result
 
-SimpleMem 论文 Table 1 使用 GPT-4.1-mini 的全量结果为：多跳 43.46、时间 58.62、开放域 19.76、单跳 51.12，四类平均 F1 43.24。
-本次开启反思的子集结果为 {on['locomo_f1']['mean']*100:.2f} 分，模型、题目分布与代码版本均不同；仅作为条件不同的对照，不能据此宣称复现了该数值或超过论文。
-本次 token 统计包含全部检索规划、反思和最终回答的 API 用量，不能未经口径核对就与论文的 token 数字计算节省倍数。
+Paper Table 1 reports GPT-4.1-mini F1 of 43.46 multi-hop, 58.62 temporal, 19.76 open-domain and 51.12 single-hop, macro-average 43.24. Our reflection-on subset F1 is {on['locomo_f1']['mean']*100:.2f}. Different model, subset and source version prevent a direct numerical reproduction or superiority claim. Our tokens include planning, reflection and final answers; the paper's token accounting must be reconciled before calculating a cross-study saving ratio.
 
-## 结果文件与来源
+## Files and references
 
-- questions.csv / questions.jsonl：每个问题运行的原始答案、参考、双评分、时延、用量与失败标记。
-- trials.csv：两组各三轮的汇总；categories.csv：分类结果；paired_questions.csv：按题目平均后的成对比较。
-- api_ledger.jsonl：每个 API 请求前的预算预留与返回用量，支持核对失败和中断支出；不包含密钥。
-- run_metadata.jsonl：固定选题、协议、代码提交、数据和记忆校验值、运行状态。
-- analysis.jsonl / comparison.png / comparison.svg：统计结果与可导出图表。
-- [论文](https://arxiv.org/html/2601.02553v3)，[SimpleMem 代码](https://github.com/aiming-lab/SimpleMem)，[LoCoMo 评分来源]({protocol['scorer_source']})，[官方人民币价格](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)。
+- `questions.csv` / `questions.jsonl`: raw answers, references, both scores, timings, usage and failure flags.
+- `trials.csv`, `categories.csv`, `paired_questions.csv`: trial/category/paired aggregates.
+- `api_ledger.jsonl`: persistent pre-request reservations and returned usage, without credentials.
+- `run_metadata.jsonl`: fixed selection, protocol, code/data/memory hashes and runtime state.
+- `analysis.jsonl`, `comparison.png`, `comparison.svg`: numerical analysis and figures.
+- [Paper](https://arxiv.org/html/2601.02553v3), [SimpleMem](https://github.com/aiming-lab/SimpleMem), [pinned LoCoMo scorer]({protocol['scorer_source']}), [official pricing](https://api-docs.deepseek.com/quick_start/pricing/).
 '''
     discussion=OUT/'DISCUSSION.md'
     if discussion.exists():report+='\n'+discussion.read_text()

@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 import config
 if not config.OPENAI_API_KEY:
-    raise SystemExit('请先双击“配置模型密钥.command”，在本机输入密钥。')
+    raise SystemExit('Run Configure_API_Key.command and enter your key locally first.')
 from main import SimpleMemSystem
 with tempfile.TemporaryDirectory(prefix='simplemem-smoke-') as db:
     system = SimpleMemSystem(db_path=db, clear_db=False, enable_parallel_processing=False, enable_parallel_retrieval=False)

@@ -31,7 +31,7 @@ if args.embedding:
     status['embedding_shape'] = list(v.shape)
 if args.api:
     if not config.OPENAI_API_KEY:
-        raise SystemExit('请先双击项目中的“配置模型密钥.command”。')
+        raise SystemExit('Run Configure_API_Key.command to configure your key locally first.')
     from openai import OpenAI
     c = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL, max_retries=0, timeout=60)
     try:

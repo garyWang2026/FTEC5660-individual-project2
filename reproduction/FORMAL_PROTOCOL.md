@@ -1,25 +1,27 @@
-# 正式实验预先固定的设计
+# Prespecified first-conversation experiment
 
-研究问题：在固定长期对话记忆上，关闭反思补充检索会怎样改变回答 F1、用量和响应时间？
+Research question: How does disabling reflective retrieval change answer F1, API usage and latency on a fixed long-conversation memory?
 
-- 任务为 LoCoMo conv-26 的 40 道题，类别 1–4 各 10 题。排除全部 8 道用量试跑题。
-- 选题 seed=5660，选题清单在 formal_protocol.json，运行前保存版本。
-- 两组仅 reflection 开关不同；同一模型、提示词、检索参数与同一份已经建好的 454 条记忆，均开启 planning。
-- 每组在全部 40 题上重复 3 轮，预计 240 个问题运行。API 未设置模型 seed，不声称模型输出可逐字确定。
-- 每题的两组并行运行，每次最多两个问题运行同时在途；每组内部检索仍串行，CPU embedding 串行保护，使用 4 个 CPU 线程。结果中的延迟是在这个固定并发负载下测得，不代表单请求独占机器的延迟。
-- 每轮使用预先固定的不同问题顺序，组提交顺序随机且固定 seed=5661+trial，以减少时间/缓存顺序偏差。
-- 主要质量指标为 LoCoMo 官方类别感知 F1；保留作者原始 set-token F1 为辅助指标。两种评分均离线应用到两组全部结果，不改变模型输入。
-- 官方规则：标准化标点、去除 a/an/the/and、Porter 词干与词频计数；类别 1 按逗号分子答案，类别 3 的参考答案只取分号前短答案，类别 2/4 直接评分。
-- 评分依据固定版本：https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/task_eval/evaluation.py
-- 每次请求持久记录开始时的费用预留以及返回用量。响应不含 usage 或输出截断时停止，不继续无计量调用；未知费用和崩溃中断的请求保留完整费用预留。
-- 总预算 10 元：为先前试跑/连通样例保守预留 1 元，正式实验按全高峰费率最多 9 元。发送每个请求前按 UTF-8 字节、额外模板开销与最大输出 4096 token 做保守费用预留；不足以覆盖下一请求时停止并保存结果。
-- 2026-11-09 官方高峰价（每百万 token）：未缓存输入 2 元、缓存输入 0.04 元、输出 8 元。费用报告保留空闲/高峰区间，平台实际扣费可能更低。
-- 支持中断后按同一持久账本续跑，不能通过重启清空预算；已写完的题目不会重复运行。
-- 记忆数据库复制后只读使用，并在结束时检查所有记忆内容与 ID 没有改变；不重新调用模型整理记忆。
-- 统计先按每轮 40 题汇总，再报告 3 轮的均值和样本标准差。分题类别结果另列，失败题计 0 分并独立统计。
-- 方差只描述固定记忆条件下的检索与回答随机性；仅一组对话，不能推断整个 LoCoMo 的总体表现。
-- 与论文 Table 1 的 GPT-4.1-mini 数字（平均 F1 43.24）仅作条件不同的参考：本项目用 DeepSeek、单对话子集和较新作者代码，不能宣称直接复现或超过论文全量结果。
+- Task: 40 LoCoMo conv-26 questions, ten each from categories 1-4; exclude all eight pilot questions.
+- Selection seed: 5660. The immutable question list is in `formal_protocol.json`, saved before execution.
+- Only the reflection switch differs between arms. Model, prompts, retrieval settings, planning and all 454 fixed memory entries are shared.
+- Three full trials per arm give 240 question-runs. No provider model seed is set; verbatim deterministic answers are not claimed.
+- Run each question's two arms concurrently, at most two question-runs in flight; retrieval within an arm is sequential, embedding calls are serialized and CPU thread count is four. Reported latency is under this fixed shared workload.
+- Question and arm submission order are randomized with a fixed schedule seed of 5661 + trial.
+- Primary metric: pinned LoCoMo category-aware F1. Secondary metric: original SimpleMem set-token F1. Both are computed offline on all answers and do not alter model inputs.
+- Official-rule normalization removes punctuation and a/an/the/and, applies Porter stemming and counts token multiplicity. Category 1 averages best matches for comma-separated reference subanswers; category 3 uses the reference prefix before the semicolon; categories 2/4 use direct scoring.
+- [Pinned scoring source](https://github.com/snap-research/locomo/blob/3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376/task_eval/evaluation.py).
+- Persist a cost reservation before each request and record returned usage. Missing usage or truncated output stops the run. Interrupted or unknown requests retain their full reservation.
+- Original total cap: CNY 10, comprising CNY 1 reserved for prior pilot/checks and CNY 9 for formal queries at peak prices. Conservatively reserve input UTF-8 bytes plus template overhead and up to 4096 output tokens before sending each request. Stop and save if the next request cannot be covered.
+- Peak rates checked on 2026-11-09, CNY per million tokens: uncached input 2, cached input 0.04, output 8. Report off-peak/peak estimates; actual billing may differ.
+- Resume using the same ledger. Completed tuples are skipped, and restarting cannot reset expenditure.
+- Use a copied memory database without rebuilding it; verify all memory content and IDs are unchanged at completion.
+- Aggregate each 40-question trial, then report the mean and sample standard deviation across three trials. Report categories separately; retain failed questions with zero scores and count failures separately.
+- Variability concerns retrieval/answer generation conditional on fixed memories. A single conversation cannot establish whole-LoCoMo performance.
+- The paper's Table 1 GPT-4.1-mini macro F1 of 43.24 is contextual only. DeepSeek, a conversation subset and newer source code prevent direct numerical reproduction claims.
 
-运行准备：`.venv/bin/python reproduction/run_formal.py --prepare`（只生成固定清单，不调用 API）。
-实际运行/续跑：`HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv/bin/python -u reproduction/run_formal.py`。
-进度和账本保存在 test_results/formal-20261109。运行期间不修改评分或选择题目。
+Preparation without API calls: `.venv/bin/python reproduction/run_formal.py --prepare`.
+
+Paid run/resume: `HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv/bin/python -u reproduction/run_formal.py`.
+
+Local progress and ledger: `test_results/formal-20261109`. Questions and scoring were not changed during execution. The separately fixed second-conversation design is in `replication_plan.json` and `replication_protocol.json`.

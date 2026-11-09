@@ -1,141 +1,103 @@
-# FTEC5660 SimpleMem 复现工作
+# FTEC5660: SimpleMem reproducibility study
 
-## 当前阶段
+This coursework reproduces the text-memory pipeline of [SimpleMem](https://github.com/aiming-lab/SimpleMem) on a budgeted LoCoMo subset and measures one controlled modification: disabling reflective retrieval. The original authors retain credit for SimpleMem; their license and multilingual documentation are preserved.
 
-已完成环境准备、8 题用量试跑和跨两组对话的正式实验：80 道不同问题 × 两种配置 × 三轮，共 480 次问题运行。
+## Completed experiment
 
-## 原始来源
+Two complete conversations, 80 distinct questions, two conditions and three trials per condition produced **480 question-runs**. With reflection on/off, category-aware LoCoMo F1 was **48.56 / 48.28 points**. Disabling reflection reduced API tokens per question by **62.2%** and measured question latency by **42.1%** under the fixed paired workload. These are subset results with DeepSeek Flash, not a reproduction of the paper's full-benchmark numerical result.
 
-- 作者仓库：https://github.com/aiming-lab/SimpleMem
-- 原始提交：db80b6a7c591e0ea730a058e9f5fc4eb06572299
-- 下载后逐文件核对：461 个文件完全一致。
-- LoCoMo 数据：https://github.com/snap-research/locomo
-- 数据固定提交：3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376
-- 数据文件：test_ref/locomo10.json；来源和校验值见 provenance.json。
+## Submission materials
 
-## 本机使用
+- [Final report, editable Markdown](../submission/REPORT.md) and [seven-page PDF](../output/pdf/SimpleMem_Reproducibility_Report.pdf).
+- [English presentation outline and speaking script](../submission/PRESENTATION_SCRIPT.md), designed for a recording below 15 minutes.
+- [GitHub publishing guide](../submission/GITHUB_PUBLISHING.md) for garyWang2026.
+- [Combined measured results](results/replication-20261109/RESULTS.md), [first-conversation results](results/formal-20261109/RESULTS.md), and [historical pilot](results/pilot-20261109/RESULTS.md).
 
-1. 注册 https://platform.deepseek.com/ ，创建 API key，查看余额。
-2. 双击项目根目录的“配置模型密钥.command”，在本机输入密钥。输入不可见是正常现象。
-3. 如需重建数据/模型：运行 `.venv/bin/python reproduction/download_data.py` 与 `.venv/bin/python reproduction/download_embedding.py`。
-4. 离线检查：`.venv/bin/python reproduction/check_setup.py`。
-5. 下载并检查本地检索模型：`.venv/bin/python reproduction/check_setup.py --embedding`。
-6. 单次 API 检查（付费）：`.venv/bin/python reproduction/check_setup.py --api`。
-7. 两句合成对话的流程样例（付费）：`.venv/bin/python reproduction/smoke_test.py`。
+The experiment and report are complete. Repository publication, adding the required student identity to the report if requested by the course, and recording/submitting the presentation remain the student's steps. A script is not a completed recording.
 
-所有命令均在项目根目录运行。不要把密钥放进聊天或提交到 GitHub。
-重建本地配置：将 `reproduction/config.template.py` 复制到项目根目录并命名为 `config.py`；将 `reproduction/deepseek.env.example` 复制为根目录 `.env`，然后运行密钥输入工具。
+## Sources and provenance
 
-软件安装：`PIP_CERT=/etc/ssl/cert.pem SSL_CERT_FILE=/etc/ssl/cert.pem REQUESTS_CA_BUNDLE=/etc/ssl/cert.pem .venv/bin/python -m pip install -r reproduction/requirements-text.txt`。
-完整安装快照在 requirements-lock.txt 中（安装完成后生成）。
+- SimpleMem source commit: `db80b6a7c591e0ea730a058e9f5fc4eb06572299`. All 461 downloaded files matched that upstream snapshot before local changes.
+- LoCoMo data/scorer commit: `3eb6f2c585f5e1699204e3c3bdf7adc5c28cb376`, from [snap-research/locomo](https://github.com/snap-research/locomo).
+- Dataset SHA-256: `79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4`.
+- Exact embedding file versions/hashes: [provenance.json](provenance.json). Qwen's official ModelScope distribution was used after Hugging Face timed out; all downloaded files were hash-checked.
+- Fixed designs: [original protocol](FORMAL_PROTOCOL.md), `formal_protocol.json`, `replication_plan.json`, and `replication_protocol.json`. These experimental manifests are preserved unchanged.
 
-## 暂定实验设计
+## Environment and installation
 
-使用文本 SimpleMem 和固定 LoCoMo 子集。先用少量问题试跑以测量用量，再确定正式规模。
-原始配置与关闭 reflection 的配置使用相同问题、模型、提示词和已经构建的记忆；默认重复 3 次。
-记录回答 F1、检索/回答时间、API 调用和 token 用量、失败次数；把失败与正确拒答分开。
-正式报告需对齐论文的题目类别、评分与平均方式；子集或模型差异必须明确说明，不能宣称复现全量论文数值。
-DeepSeek 是模型替换，reflection 开关是后续主要实验变量。
-正式实验已完成，固定 40 道未用于试跑的题，两组各三轮；结果见下方正式结果链接。
+Measured on an Apple Silicon Mac with Python 3.13.2, torch 2.6.0 and transformers 4.57.0. Qwen/Qwen3-Embedding-0.6B ran on CPU with four threads during the formal experiments. The exact installed package snapshot is `requirements-lock.txt`; `requirements-text.txt` is the smaller text-pipeline dependency list. Other operating systems or Python versions may require package adjustments.
 
-## 设置与兼容调整
-
-本机为 Apple Silicon，使用独立 Python 3.13 环境。
-本地检索模型仍采用作者的 Qwen/Qwen3-Embedding-0.6B。
-并发数暂降为 2，避免首次测试大量并行请求。
-DeepSeek 当前接口默认启用 thinking，因此兼容调整显式传递开关；两组实验使用同一设置。
-Python 证书使用 macOS 系统证书 /etc/ssl/cert.pem，不关闭 TLS 校验。
-API key 只保存在本机被忽略的 .env 中，config.py 也被忽略。
-
-## 后续交付
-
-- 实测结果及改动对比。
-- 最多 10 页报告，含环境、实验目标、结果、改动、调试记录和限制。
-- 自己的 GitHub 仓库，含安装运行说明和清楚的修改记录。
-- 最长 15 分钟的 Zoom 录制展示链接。
-
-数据检查：10 组长对话，共 1,986 道问题。类别 1/2/3/4/5 的数量分别为 282/321/96/841/446。第一组对话有 419 轮，因此 --num-samples 1 仍不是几道题的小测试。
-
-## 准备阶段调试记录（2026-11-09）
-
-- ZIP 解压代码与作者提交逐文件完全一致，已建立本地原始快照。
-- 原始代码不附带 LoCoMo 数据，从数据作者仓库固定版本补齐。
-- Python 的默认 HTTPS 证书配置导致安装失败；为安装及其构建子进程指定系统证书后恢复。
-- 文本代码导入和数据检查通过。首次导入评测包时需要构建字体缓存，耗时约两分钟。
-- 首轮本地检查 9 项通过、2 项失败，失败原因是没有安装 pylance，导致关键词索引创建被跳过；补装作者清单中的 pylance==0.39.0 后重新检查。
-- Hugging Face 连接超时，使用 Qwen 官方魔搭模型，记录文件版本和 SHA-256；大文件采用分段下载，拼接后核对完整校验值。
-- DeepSeek 当前模型默认开启 thinking；增加显式开关支持，避免本地配置与实际请求不一致。兼容检查使用模拟 HTTP，无实际 API 调用。
-
-复查结果：`pip check` 无依赖冲突；`tests/test_deepseek_compat.py` 与 `tests/test_vector_store_backend.py` 合计 11 项通过（5.33 秒）。这些是离线功能检查，不是论文实验结果。
-
-检索模型从 Qwen 在魔搭社区发布的同名模型下载（Hugging Face 连接超时），每个文件均核对发布方 SHA-256。文件版本和校验值记录在 provenance.json 的 embedding 字段；本机从 .cache/models/Qwen3-Embedding-0.6B 加载。
-
-本地模型检查发现 torch 2.6.0 在此 Mac 的 Metal/MPS 路径中出现形状推导崩溃。为检索模型加入可选 EMBEDDING_DEVICE 设置，本机显式选择 cpu；模型权重保持同一份，后续两组实验均使用 CPU。
-
-## 准备完成状态
-
-- 依赖安装完成，实际安装版本已固定在 requirements-lock.txt。
-- LoCoMo 数据下载、格式与校验值检查通过。
-- Qwen 检索模型的所有文件和完整权重校验通过。
-- CPU 实际运行通过：一句测试文本生成 1×1024 检索向量。
-- 本地数据库与 DeepSeek 请求兼容性共 11 项检查通过。
-- API 密钥已由用户在本机配置；连接、完整问答样例和 8 题 LoCoMo 用量测试均已通过，正式重复实验和关闭 reflection 的改动对比也已完成。
-
-## 小规模真实数据用量测试
-
-连接检查已成功返回 OK。两句合成对话的完整流程成功：建立两条记忆，正确回答 Shanghai，耗时 8.79 秒（不含模型初始化）。合成样例不能替代 LoCoMo 实验。
-
-用量测试入口：`.venv/bin/python reproduction/run_pilot.py --dry-run` 只显示固定选题，无 API 调用；去掉 --dry-run 执行小规模基线测试。
-默认使用第一组对话 conv-26 的全部 419 轮对话，从类别 1–4 各固定随机选 2 题，共 8 题（seed=5660）；不使用答案或 evidence 构建记忆。类别 5 不在本轮范围内。
-保留作者的文本压缩、检索规划、反思和回答提示词。临时限制记忆构建单次输出最多 8192 token、检索/回答单次输出最多 4096 token，关闭 SDK 自动重试，记忆构建并发为 2，检索串行；完整记录实际使用的参数。
-每次调用记录服务端 token 用量、缓存命中、耗时、阶段和失败状态，不记录密钥。最多 80 次调用、250000 token 的保守预留上限，达到上限立即停下并保存已有结果。
-费用按 2026-11-09 DeepSeek 官方人民币价目表估算，报告空闲/高峰区间，不能代替平台账单。
-本轮评分只使用作者脚本的 set-token F1；正式与论文比较前仍须核对官方 LoCoMo 评分和汇总方式。
-结果、原始回答、调用用量和可复用的记忆库保存在 test_results/pilot-时间戳 中。本轮不执行 reflection 改动对比或正式重复实验。
-
-用量试跑结果见 [8 题用量试跑报告](results/pilot-20261109/RESULTS.md)。
-
-## 正式结果与重现步骤
-
-- [完整正式结果、对比图与限制](results/formal-20261109/RESULTS.md)：240/240 次问题运行完成，无 API 失败；记忆前后不变。
-- 主要结果：开启/关闭反思的官方规则 F1 为 50.62/50.47；关闭后每题 token 减少 62.2%，测得耗时减少 41.0%。这是固定单对话子集的结果，不是总体结论。
-- 正式 API 用量 1,933,234 token，按官方空闲/高峰价估算 1.71–3.42 元；包含先前试跑的预算仍在 10 元限制内。
-- [实验前固定的设计](FORMAL_PROTOCOL.md)和 formal_protocol.json 保留选题、评分与费用上限。
-
-从新目录重现（命令均在项目根目录）：
+Run commands from the repository root:
 
 ```sh
 python3 -m venv .venv
-PIP_CERT=/etc/ssl/cert.pem SSL_CERT_FILE=/etc/ssl/cert.pem REQUESTS_CA_BUNDLE=/etc/ssl/cert.pem .venv/bin/python -m pip install -r reproduction/requirements-lock.txt
+.venv/bin/python -m pip install -r reproduction/requirements-lock.txt
 cp reproduction/config.template.py config.py
 cp reproduction/deepseek.env.example .env
 .venv/bin/python reproduction/setup_key.py
 .venv/bin/python reproduction/download_data.py
 .venv/bin/python reproduction/download_embedding.py
-.venv/bin/python reproduction/restore_formal_memory.py
-HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false .venv/bin/python -u reproduction/run_formal.py
-.venv/bin/python reproduction/analyze_formal.py
+.venv/bin/python reproduction/check_setup.py --embedding
 ```
 
-上述安装方式按本次 macOS/Python 环境记录，系统证书路径可按自己的系统调整。重新运行模型实验会产生 API 费用；只查看已保存结果、恢复快照和离线分析不会产生模型费用。
-已有运行会按同一持久账本续跑，完成的 240 个组合不会重复调用；如需全新独立复验，应另建检出目录并保留自己的预算记录。
-尚未发布自己的 GitHub 仓库，未生成最终提交版报告或录制展示。
+On this Mac, installation required the system certificate bundle. If the same certificate error occurs, prefix the installation command with `PIP_CERT=/etc/ssl/cert.pem SSL_CERT_FILE=/etc/ssl/cert.pem REQUESTS_CA_BUNDLE=/etc/ssl/cert.pem`. Keep TLS certificate verification enabled.
 
-## 新对话扩展已完成（最新结果）
+Create an API key in your own [DeepSeek account](https://platform.deepseek.com/). The setup tool accepts hidden input; the root `Configure_API_Key.command` is a double-click launcher after the environment is installed. Credentials remain in ignored `.env`; root `config.py` is also ignored. Do not commit either file. No key is needed merely to read the saved results.
 
-[查看两组对话合并结果](results/replication-20261109/RESULTS.md)。在保留第一组完整结果的基础上，新增 conv-49 的 509 轮对话、540 条固定记忆、40 道题，两组各三轮，新增 240 次问答，API 失败 0 次，记忆前后不变。
-新增部分的记忆构建和问答全部计入同一 4.5 元上限，按官方空闲/高峰价估算为 2.12–4.24 元，没有提高预算。
-合并 80 题、480 次问答：开启/关闭反思 F1 为 48.56/48.28；关闭后每题 token 减少 62.2%，本次并发负载下耗时减少 42.1%。这是两组固定对话的结果，不是全量 LoCoMo 结论。
-新增对话与选题在测题前固定，详见 replication_plan.json 和 replication_protocol.json。首次本地预热因沿用旧姓名失败，修正后才开始测题，既有构建和账本均保留。
+Optional paid checks: `check_setup.py --api` sends one short request; `smoke_test.py` runs a tiny synthetic memory example. The recorded smoke test built two memories and answered Shanghai in 8.79 seconds, excluding initialization. It is not a benchmark result.
+
+## Inspect or recompute saved results offline
+
+The tracked result directories contain the raw answers, reference answers, per-request usage ledgers, scores, figures and memory snapshots. Reading these files does not invoke a model.
+
+The analysis scripts read the original local `test_results/` run folders. Those temporary folders are ignored and are not included in a fresh clone. To recompute tables directly from a fresh clone's tracked archives, use:
 
 ```sh
-# 恢复本次固定新对话记忆，不调用 API
+.venv/bin/python reproduction/analyze_formal.py --archived
+.venv/bin/python reproduction/analyze_replication.py --archived
+```
+
+Without `--archived`, analysis reads the original local run folders. Both modes are offline and preserve experimental evidence.
+
+## Replay the paid experiment in a separate checkout
+
+Restore the exact recorded memories without paid reconstruction:
+
+```sh
+.venv/bin/python reproduction/restore_formal_memory.py
 .venv/bin/python reproduction/restore_replication_memory.py
-# 复验/续跑；调用 API，保持同一新增 4.5 元账本上限
+```
+
+Then run the question trials, which incur API charges:
+
+```sh
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false .venv/bin/python -u reproduction/run_formal.py
 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false .venv/bin/python -u reproduction/run_replication.py
-# 离线核对与汇总，不调用 API
+.venv/bin/python reproduction/analyze_formal.py
 .venv/bin/python reproduction/analyze_replication.py
 ```
 
-如需从原始对话重新构建新记忆，入口为 `run_replication.py --build-memory`，也会使用同一费用账本；已有完整记忆不会重复构建。已有相同预算账本的复验不能通过重启重置费用。
-目前实验材料已完整，最终提交版报告、自己的 GitHub 发布和录制展示仍待完成。
+The runners resume the same persistent ledger and skip completed tuples. Use a separate checkout for an independent repeat; restarting must not reset the budget. The original experiment had a CNY 9 question-phase cap plus CNY 1 reserved for prior checks. The extension had a separate CNY 4.5 cap including memory construction and all queries. Prices and available model aliases can change: check the provider before a new paid run. Responses are stochastic and the provider alias is not an immutable model snapshot.
+
+`run_replication.py --build-memory` reconstructs the extension memories using paid calls under the same extension ledger. Restoring the snapshot is sufficient to repeat retrieval and answers. To inspect pilot selection without API usage, run `run_pilot.py --dry-run`.
+
+## Controlled settings and metrics
+
+Both arms use the same fixed memory, model, prompts, planner and retrieval settings. Only reflection changes; the on arm permits at most two additional retrieval rounds. Each conversation contributes ten questions from each of categories 1-4. Category 5 is excluded. Each question's two arms run concurrently, with sequential retrieval inside each arm and serialized CPU embedding calls. Latency includes this shared workload.
+
+The primary metric follows the pinned category-aware LoCoMo lexical F1 rules. The original SimpleMem set-token F1 is retained as a secondary metric. Neither is a semantic correctness rate. Mean and sample standard deviation are calculated across three trial aggregates. The question-paired bootstrap is conditional on these two fixed conversations and memories; it does not establish population generality or non-inferiority.
+
+## Changes and debug diary
+
+1. Downloaded and pinned missing benchmark data; recorded package/model provenance.
+2. Fixed certificate configuration, installed missing `pylance==0.39.0` for keyword indexing, and verified the database backend.
+3. Added an explicit DeepSeek thinking toggle and optional embedding device selection. CPU avoids a torch 2.6.0 Metal/MPS shape-inference crash on this Mac. These settings are shared by both arms.
+4. Added fixed sampling, three-trial runners, official-rule scoring, persistent budget reservations, failure accounting and offline analysis. Original text pipeline prompts were retained.
+5. Fixed a local extension warmup check that still searched for Caroline; it now uses the current conversation speaker. This happened before any extension question API calls. The 14 completed build calls, memories and budget ledger were retained.
+6. Preserved raw experimental outputs and snapshots; translated only coursework prose, helper prompts and report generators. Upstream multilingual materials are unchanged.
+
+## Cost and limitations
+
+Metered pilot, formal and extension phases total 2,495 API calls and 4,265,887 tokens, with a price-list estimate of CNY 4.2078-8.4156. This excludes the initial connection check and synthetic smoke test and is not an invoice. No account balances are published.
+
+Only two of ten LoCoMo conversations were tested. The extension conversation was chosen by a cost rule, not random sampling. Memories were built once per conversation. No paid semantic judge was used. The paper's GPT-4.1-mini full-benchmark F1 of 43.24 is contextual only: model, subset and code version differ.

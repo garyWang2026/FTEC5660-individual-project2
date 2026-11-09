@@ -9,9 +9,10 @@ Two complete conversations, 80 distinct questions, two conditions and three tria
 ## Submission materials
 
 - [Final report: seven-page PDF](../output/pdf/SimpleMem_Reproducibility_Report.pdf).
+- [Editable nine-slide PowerPoint](../output/pptx/FTEC5660_individual_project2.pptx), with speaking notes and native charts/tables.
 - [Combined measured results](results/replication-20261109/RESULTS.md), [first-conversation results](results/formal-20261109/RESULTS.md), and [historical pilot](results/pilot-20261109/RESULTS.md).
 
-The experiment and PDF report are complete. Repository publication and recording/submitting the presentation remain separate steps. Add any course-required student identity before final submission. Optional editable report, presentation and publishing drafts have been removed from the current tree at the owner's request.
+The experiment, PDF report and editable presentation deck are complete, and the public repository is published at https://github.com/garyWang2026/FTEC5660-individual-project2. Record and submit your own presentation, and add any course-required student identity before final submission. The optional standalone submission drafts remain removed from the current tree.
 
 ## Sources and provenance
 

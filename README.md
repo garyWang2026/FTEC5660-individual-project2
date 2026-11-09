@@ -1,4 +1,4 @@
-> **FTEC5660 reproducibility work:** This checkout includes a measured 80-question, two-conversation, three-trial reflection ablation. See the [report PDF](output/pdf/SimpleMem_Reproducibility_Report.pdf), [course setup and run instructions](reproduction/README.md), and [measured results](reproduction/results/replication-20261109/RESULTS.md). The upstream README follows below.
+> **FTEC5660 reproducibility work:** This checkout includes a measured 80-question, two-conversation, three-trial reflection ablation. See the [report PDF](output/pdf/SimpleMem_Reproducibility_Report.pdf), [editable presentation](output/pptx/FTEC5660_individual_project2.pptx), [course setup and run instructions](reproduction/README.md), and [measured results](reproduction/results/replication-20261109/RESULTS.md). The upstream README follows below.
 
 <div align="center">
 

@@ -100,8 +100,8 @@ def main():
         assert len(store.get_all_entries())==protocol['memory_entries']
         assert before_hash==hashlib.sha256(json.dumps(sorted(source_memories,key=lambda m:m['entry_id']),sort_keys=True).encode()).hexdigest()
         # Warm both identical read-only search routes before timed trials; no API calls.
-        assert store.semantic_search('Caroline',top_k=1)
-        assert store.keyword_search(['Caroline'],top_k=1)
+        assert store.semantic_search(protocol.get('warmup_query','Caroline'),top_k=1)
+        assert store.keyword_search([protocol.get('warmup_query','Caroline')],top_k=1)
         pipelines={}
         for condition in protocol['conditions']:
             llm=LLMClient(use_streaming=False,enable_thinking=False)

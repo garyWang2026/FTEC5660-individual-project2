@@ -85,6 +85,7 @@ def make_query_protocol():
     if not build['completed']:raise SystemExit('Memory construction is incomplete.')
     p=json.loads((ROOT/'reproduction/formal_protocol.json').read_text())
     p.update({'sample_index':plan['sample_index'],'sample_id':plan['sample_id'],'data_sha256':plan['data_sha256'],'memory_sha256':hashlib.sha256((SOURCE/'memories.json').read_bytes()).hexdigest(),'memory_source':str(SOURCE.relative_to(ROOT)),'memory_entries':build['memory_count'],'selection_seed':plan['selection_seed'],'excluded_pilot_indices':[],'question_indices':plan['question_indices'],'questions':plan['questions'],'schedule_seed':5663,'formal_budget_upper_cny':plan['additional_budget_cny'],'prior_work_reserve_cny':0,'total_budget_cny':plan['additional_budget_cny'],'additional_experiment_only':True,'memory_build_charged_to_same_ledger':True})
+    p['warmup_query']=json.loads((ROOT/'test_ref/locomo10.json').read_text())[plan['sample_index']]['conversation']['speaker_a']
     return p
 
 

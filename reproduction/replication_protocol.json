@@ -519,5 +519,6 @@
   "request_timeout_seconds": 90,
   "latency_note": "Two arms run concurrently on each question; elapsed latency is under this fixed paired workload, not isolated single-request latency. No inference about across-conversation or memory-build variance.",
   "additional_experiment_only": true,
-  "memory_build_charged_to_same_ledger": true
+  "memory_build_charged_to_same_ledger": true,
+  "warmup_query": "Evan"
 }

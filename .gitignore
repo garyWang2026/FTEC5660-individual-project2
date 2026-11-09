@@ -87,3 +87,6 @@ test_results/
 *.pth
 *.onnx
 docs/other
+
+# Course reproduction artifacts
+!/reproduction/provenance.json

@@ -78,7 +78,7 @@ class EmbeddingModel:
         """Initialize standard SentenceTransformer model"""
         try:
             from sentence_transformers import SentenceTransformer
-            self.model = SentenceTransformer(self.model_name)
+            self.model = SentenceTransformer(self.model_name, device=getattr(config, "EMBEDDING_DEVICE", None))
             self.dimension = self.model.get_sentence_embedding_dimension()
             self.model_type = "sentence_transformer"
             self.supports_query_prompt = False

@@ -8,12 +8,10 @@ Two complete conversations, 80 distinct questions, two conditions and three tria
 
 ## Submission materials
 
-- [Final report, editable Markdown](../submission/REPORT.md) and [seven-page PDF](../output/pdf/SimpleMem_Reproducibility_Report.pdf).
-- [English presentation outline and speaking script](../submission/PRESENTATION_SCRIPT.md), designed for a recording below 15 minutes.
-- [GitHub publishing guide](../submission/GITHUB_PUBLISHING.md) for garyWang2026.
+- [Final report: seven-page PDF](../output/pdf/SimpleMem_Reproducibility_Report.pdf).
 - [Combined measured results](results/replication-20261109/RESULTS.md), [first-conversation results](results/formal-20261109/RESULTS.md), and [historical pilot](results/pilot-20261109/RESULTS.md).
 
-The experiment and report are complete. Repository publication, adding the required student identity to the report if requested by the course, and recording/submitting the presentation remain the student's steps. A script is not a completed recording.
+The experiment and PDF report are complete. Repository publication and recording/submitting the presentation remain separate steps. Add any course-required student identity before final submission. Optional editable report, presentation and publishing drafts have been removed from the current tree at the owner's request.
 
 ## Sources and provenance
 

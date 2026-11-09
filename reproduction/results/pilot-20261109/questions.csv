@@ -1,0 +1,9 @@
+qa_index,category,question,reference,answer,upstream_f1,total_seconds,api_calls,prompt_tokens,completion_tokens,total_tokens,failed
+3,1,What did Caroline research?,Adoption agencies,Adoption agencies,1.0,7.405896917000064,5,7040,474,7514,False
+9,2,"When did Caroline meet up with her friends, family, and mentors?",The week before 9 June 2023,During the week before 6 July 2023 (picnic with friends and family),0.4444444444444444,15.947656123998968,8,23115,1256,24371,False
+27,3,Would Caroline pursue writing as a career option?,"LIkely no; though she likes reading, she wants to be a counselor","No, Caroline is pursuing counseling and mental health, not writing.",0.0,17.17428579100033,8,20575,1078,21653,False
+30,3,Would Melanie be considered a member of the LGBTQ community?,"Likely no, she does not refer to herself as part of it",Not indicated in the context,0.11764705882352941,15.311908458000289,8,12761,975,13736,False
+31,2,When did Melanie go camping in June?,The week before 27 June 2023,The week before 27 June 2023,1.0,13.550108834000639,8,14009,843,14852,False
+56,1,What symbols are important to Caroline?,"Rainbow flag, transgender symbol",Rainbow flag mural and eagle,0.4444444444444445,8.759519500000351,5,8380,689,9069,False
+139,4,What was the poetry reading that Caroline attended about?,It was a transgender poetry reading where transgender people shared their stories.,A transgender poetry reading where transgender people shared their stories through poetry,0.8571428571428572,6.622056874999544,5,7920,550,8470,False
+151,4,What did Melanie do after the road trip to relax?,Went on a nature walk or hike,She did a trail walk with her family on 19 October 2023.,0.3157894736842105,8.119899915999667,5,6572,514,7086,False

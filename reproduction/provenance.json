@@ -11,7 +11,7 @@
     "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
   },
   "prepared_on": "2026-11-09",
-  "status": "setup_only_no_benchmark_results",
+  "status": "pilot_complete_formal_comparison_pending_budget",
   "embedding": {
     "model": "Qwen/Qwen3-Embedding-0.6B",
     "source": "https://modelscope.cn/models/Qwen/Qwen3-Embedding-0.6B",
@@ -88,7 +88,17 @@
       1024
     ],
     "offline_checks_passed": 11,
-    "api_test_run": false,
-    "benchmark_run": false
+    "api_test_run": true,
+    "benchmark_run": true,
+    "smoke_test_run": true,
+    "formal_experiment_run": false
+  },
+  "pilot": {
+    "result_summary": "reproduction/results/pilot-20261109/RESULTS.md",
+    "questions": 8,
+    "api_calls": 63,
+    "total_tokens": 196785,
+    "estimated_cost_cny_off_peak": 0.37889344,
+    "estimated_cost_cny_peak": 0.75778688
   }
 }

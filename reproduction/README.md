@@ -2,7 +2,7 @@
 
 ## 当前阶段
 
-已完成环境准备、合成样例、8 题用量试跑，以及 40 题 × 两种配置 × 三轮的正式实验（240 次问题运行）。
+已完成环境准备、8 题用量试跑和跨两组对话的正式实验：80 道不同问题 × 两种配置 × 三轮，共 480 次问题运行。
 
 ## 原始来源
 
@@ -93,7 +93,7 @@ API key 只保存在本机被忽略的 .env 中，config.py 也被忽略。
 本轮评分只使用作者脚本的 set-token F1；正式与论文比较前仍须核对官方 LoCoMo 评分和汇总方式。
 结果、原始回答、调用用量和可复用的记忆库保存在 test_results/pilot-时间戳 中。本轮不执行 reflection 改动对比或正式重复实验。
 
-最新结果见 [8 题用量试跑报告](results/pilot-20261109/RESULTS.md)。
+用量试跑结果见 [8 题用量试跑报告](results/pilot-20261109/RESULTS.md)。
 
 ## 正式结果与重现步骤
 
@@ -120,3 +120,22 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false .venv/bin/p
 上述安装方式按本次 macOS/Python 环境记录，系统证书路径可按自己的系统调整。重新运行模型实验会产生 API 费用；只查看已保存结果、恢复快照和离线分析不会产生模型费用。
 已有运行会按同一持久账本续跑，完成的 240 个组合不会重复调用；如需全新独立复验，应另建检出目录并保留自己的预算记录。
 尚未发布自己的 GitHub 仓库，未生成最终提交版报告或录制展示。
+
+## 新对话扩展已完成（最新结果）
+
+[查看两组对话合并结果](results/replication-20261109/RESULTS.md)。在保留第一组完整结果的基础上，新增 conv-49 的 509 轮对话、540 条固定记忆、40 道题，两组各三轮，新增 240 次问答，API 失败 0 次，记忆前后不变。
+新增部分的记忆构建和问答全部计入同一 4.5 元上限，按官方空闲/高峰价估算为 2.12–4.24 元，没有提高预算。
+合并 80 题、480 次问答：开启/关闭反思 F1 为 48.56/48.28；关闭后每题 token 减少 62.2%，本次并发负载下耗时减少 42.1%。这是两组固定对话的结果，不是全量 LoCoMo 结论。
+新增对话与选题在测题前固定，详见 replication_plan.json 和 replication_protocol.json。首次本地预热因沿用旧姓名失败，修正后才开始测题，既有构建和账本均保留。
+
+```sh
+# 恢复本次固定新对话记忆，不调用 API
+.venv/bin/python reproduction/restore_replication_memory.py
+# 复验/续跑；调用 API，保持同一新增 4.5 元账本上限
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 TOKENIZERS_PARALLELISM=false .venv/bin/python -u reproduction/run_replication.py
+# 离线核对与汇总，不调用 API
+.venv/bin/python reproduction/analyze_replication.py
+```
+
+如需从原始对话重新构建新记忆，入口为 `run_replication.py --build-memory`，也会使用同一费用账本；已有完整记忆不会重复构建。已有相同预算账本的复验不能通过重启重置费用。
+目前实验材料已完整，最终提交版报告、自己的 GitHub 发布和录制展示仍待完成。

@@ -11,7 +11,7 @@
     "sha256": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4"
   },
   "prepared_on": "2026-11-09",
-  "status": "formal_experiment_complete",
+  "status": "two_conversation_experiments_complete",
   "embedding": {
     "model": "Qwen/Qwen3-Embedding-0.6B",
     "source": "https://modelscope.cn/models/Qwen/Qwen3-Embedding-0.6B",
@@ -111,5 +111,20 @@
     "estimated_cost_cny_off_peak": 1.7096175200000001,
     "estimated_cost_cny_peak": 3.4192350400000002,
     "memory_unchanged": true
+  },
+  "replication": {
+    "sample_id": "conv-49",
+    "new_unique_questions": 40,
+    "new_question_runs": 240,
+    "combined_unique_questions": 80,
+    "combined_question_runs": 480,
+    "memory_count": 540,
+    "api_calls": 1224,
+    "total_tokens": 2135868,
+    "cost_lower_cny": 2.11930432,
+    "cost_upper_cny": 4.23860864,
+    "additional_budget_limit_cny": 4.5,
+    "memory_unchanged": true,
+    "result_summary": "reproduction/results/replication-20261109/RESULTS.md"
   }
 }

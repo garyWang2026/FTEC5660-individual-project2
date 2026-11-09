@@ -1,4 +1,4 @@
-> **FTEC5660 reproducibility work:** This checkout includes a measured 40-question, three-trial reflection ablation. See [course setup and run instructions](reproduction/README.md) and [measured results](reproduction/results/formal-20261109/RESULTS.md). The upstream README follows below.
+> **FTEC5660 reproducibility work:** This checkout includes a measured 80-question, two-conversation, three-trial reflection ablation. See [course setup and run instructions](reproduction/README.md) and [measured results](reproduction/results/replication-20261109/RESULTS.md). The upstream README follows below.
 
 <div align="center">
 

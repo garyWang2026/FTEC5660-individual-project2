@@ -43,19 +43,18 @@ class BudgetLedger:
     def set_context(self, key, stage):
         self.context.key, self.context.stage = key, stage
 
-    def wrap(self, create):
+    def wrap(self, create, output_cap=4096, default_key="unknown", default_stage="unknown"):
         def measured(**kwargs):
             if kwargs.get('stream'):
                 raise ExperimentStop('Metered experiment requires non-streaming responses.')
             messages = kwargs['messages']
-            output_cap = 4096
             # UTF-8 bytes plus generous chat-template overhead, deliberately not a reported token count.
             prompt_bound = sum(len(m['content'].encode('utf-8'))+256 for m in messages)+1024
             reserve = costs(prompt_bound, output_cap)[1]
             with self.lock:
                 if self.committed()+reserve > self.limit_cny:
                     raise ExperimentStop('Budget reservation limit reached; completed work is saved.')
-                event = {'id':len(self.events), 'key':getattr(self.context,'key','unknown'), 'stage':getattr(self.context,'stage','unknown'), 'state':'started', 'started_utc':datetime.now(timezone.utc).isoformat(), 'reserved_upper_cny':reserve, 'charged_upper_cny':reserve, 'prompt_bound':prompt_bound, 'output_cap':output_cap, 'request_model':kwargs['model'], 'temperature':kwargs.get('temperature'), 'prompt_sha256':hashlib.sha256(json.dumps(messages,sort_keys=True).encode()).hexdigest()}
+                event = {'id':len(self.events), 'key':getattr(self.context,'key',default_key), 'stage':getattr(self.context,'stage',default_stage), 'state':'started', 'started_utc':datetime.now(timezone.utc).isoformat(), 'reserved_upper_cny':reserve, 'charged_upper_cny':reserve, 'prompt_bound':prompt_bound, 'output_cap':output_cap, 'request_model':kwargs['model'], 'temperature':kwargs.get('temperature'), 'prompt_sha256':hashlib.sha256(json.dumps(messages,sort_keys=True).encode()).hexdigest()}
                 # A crash or response with unknown usage keeps the entire reservation charged.
                 self._append(event)
             kwargs['max_tokens'] = output_cap

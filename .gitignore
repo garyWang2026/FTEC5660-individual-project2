@@ -92,3 +92,6 @@ docs/other
 !/reproduction/provenance.json
 
 !/reproduction/formal_protocol.json
+
+!/reproduction/replication_plan.json
+!/reproduction/replication_protocol.json

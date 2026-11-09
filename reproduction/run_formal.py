@@ -97,7 +97,7 @@ def main():
         store=VectorStore(db_path=str(RUN/'memory_db'),embedding_model=embedder)
         before_hash=memory_digest(store.get_all_entries())
         source_memories=json.loads((ROOT/protocol['memory_source']/'memories.json').read_text())
-        assert len(store.get_all_entries())==454
+        assert len(store.get_all_entries())==protocol['memory_entries']
         assert before_hash==hashlib.sha256(json.dumps(sorted(source_memories,key=lambda m:m['entry_id']),sort_keys=True).encode()).hexdigest()
         # Warm both identical read-only search routes before timed trials; no API calls.
         assert store.semantic_search('Caroline',top_k=1)

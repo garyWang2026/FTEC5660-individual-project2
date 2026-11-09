@@ -73,7 +73,11 @@ class LLMClient:
             else:
                 # Explicitly set to False for non-streaming calls or JSON format
                 kwargs["extra_body"] = {"enable_thinking": False}
-        # For OpenAI and other APIs, don't add extra_body parameters
+        # DeepSeek currently enables thinking by default: honor the same local toggle.
+        from urllib.parse import urlparse
+        if self.base_url and urlparse(self.base_url).hostname == "api.deepseek.com":
+            kwargs["extra_body"] = {"thinking": {"type": "enabled" if self.enable_thinking else "disabled"}}
+        # Other providers retain their existing request format.
 
         # Retry mechanism
         last_exception = None

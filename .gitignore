@@ -90,3 +90,5 @@ docs/other
 
 # Course reproduction artifacts
 !/reproduction/provenance.json
+
+!/reproduction/formal_protocol.json
